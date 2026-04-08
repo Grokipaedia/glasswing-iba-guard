@@ -1,0 +1,164 @@
+# glasswing-iba-guard
+
+**Govern the patch. Not just find the bug.**
+
+Anthropic's Project Glasswing deploys Claude Mythos Preview — the most capable autonomous agent ever built — to find zero-day vulnerabilities across AWS, Apple, Google, Microsoft, NVIDIA, JPMorgan, Cisco, Palo Alto, CrowdStrike, and 30+ other organizations.
+
+It found a 27-year-old bug in OpenBSD. A 16-year-old bug in FFmpeg that automated tools missed 5 million times.
+
+Completely autonomous. No human steering.
+
+**One question the coalition announcement did not answer:**
+
+What is the agent authorized to patch — in which systems — declared by which human principal — before it touches production code?
+
+Finding a vulnerability is **read**. Patching it is **write**. Those are different authorization events. A zero-day in OpenBSD patched by an autonomous agent with no pre-execution authorization record is not a security win. It is an ungoverned write to critical infrastructure trusted by billions.
+
+This repo adds **IBA Intent Bound Authorization** as the governance layer Glasswing needs.
+
+---
+
+## The Governance Gap
+
+Glasswing's pipeline:
+
+```
+Autonomous discovery → Vulnerability confirmed → Patch generated → Patch executed
+```
+
+The authorization gap:
+
+```
+Who declared that this agent was permitted to write to this file path
+in this system version at this organization before execution fired?
+```
+
+Without a signed intent certificate at the patch execution boundary:
+
+- The patch is ungoverned
+- The audit trail is a log file, not a cryptographic record
+- Each coalition member (AWS, Apple, JPMorgan) has no binding proof of what was authorized on their behalf
+- A compromised Glasswing agent could patch and exfiltrate simultaneously with no enforceable boundary
+
+---
+
+## IBA Governance Layer
+
+**IBA Intent Bound Authorization** wraps every patch execution with a cryptographically signed intent certificate issued before the agent touches any production system.
+
+```
+Discovery (read) → Cert issued → Human principal signs → Patch executes within declared scope
+```
+
+Each coalition member receives a **shard token** — a scoped sub-certificate delegated from the master Glasswing cert — declaring exactly what that agent is permitted to modify in their environment.
+
+```json
+{
+  "iba_version": "2.0",
+  "certificate_id": "glasswing-patch-{UUID}",
+  "issued_at": "ISO-8601",
+  "coalition_member": "aws | apple | google | microsoft | jpmorgan",
+  "agent_id": "claude-mythos-glasswing",
+  "principal": "human-security-officer",
+  "principal_sig": "ECDSA-P384",
+  "declared_intent": "Patch CVE-XXXX-XXXX in declared file paths only. No data exfiltration. No scope expansion.",
+  "scope_envelope": {
+    "permitted_cve": ["CVE-XXXX-XXXX"],
+    "permitted_paths": ["/declared/file/paths/only"],
+    "permitted_systems": ["os-version-declared"],
+    "denied": ["exfiltration", "scope-expansion", "undeclared-paths", "undeclared-systems"],
+    "default_posture": "DENY_ALL"
+  },
+  "temporal_scope": {
+    "valid_from": "ISO-8601",
+    "hard_expiry": "ISO-8601"
+  },
+  "entropy_threshold": {
+    "max_kl_divergence": 0.10,
+    "flag_at": 0.07,
+    "kill_at": 0.10
+  },
+  "iba_signature": "ECDSA-P384"
+}
+```
+
+**DENY_ALL default.** The agent cannot touch any path, system, or organization not declared in the cert. If the patch scope expands — if the agent attempts to touch an undeclared file path — the gate fires before execution.
+
+**WitnessBound audit chain.** Every patch authorization is hashed and chained. Every coalition member has a non-repudiable cryptographic record of what was declared, what was executed, and what was blocked.
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/Grokipaedia/glasswing-iba-guard.git
+cd glasswing-iba-guard
+pip install -r requirements.txt
+python guard.py your-patch.diff --org aws --cve CVE-2024-XXXX
+```
+
+---
+
+## Features
+
+- Wraps any patch diff with a signed IBA Intent Certificate before execution
+- Coalition member shard tokens — each org gets a scoped sub-certificate
+- DENY_ALL default — undeclared paths, systems, and orgs blocked before write
+- Entropy threshold — drift detection during patch execution
+- WitnessBound audit logging — immutable cryptographic record per patch event
+- Hard expiry — authorization window cannot be extended by the agent
+- Works with any autonomous vulnerability patching pipeline
+
+---
+
+## Why This Matters for the Glasswing Coalition
+
+Every member of Project Glasswing — AWS, Apple, Google, Microsoft, NVIDIA, CrowdStrike, JPMorgan, Cisco, Palo Alto, Linux Foundation — operates under regulatory frameworks that require audit trails for changes to production systems.
+
+- AWS: SOC 2, FedRAMP
+- JPMorgan: OCC federal banking oversight
+- Google: ISO 27001, SOC 2
+- Microsoft: CISA critical infrastructure designation
+
+An autonomous agent patching production systems without a pre-execution authorization record creates regulatory exposure for every coalition member regardless of whether the patch is correct.
+
+IBA closes that exposure before the first patch fires.
+
+---
+
+## Intellectual Property
+
+This governance framework is protected by:
+
+**Patent:** GB2603013.0 (Pending) · UK Intellectual Property Office  
+**Filed:** February 5, 2026 · Priority date established  
+**PCT Coverage:** 150+ countries · Protected until August 2028  
+**IETF Draft:** draft-williams-intent-token-00 · Publicly available · datatracker.ietf.org  
+**NIST:** 13 filings · NIST-2025-0035  
+**NCCoE:** 10 filings · AI Agent Identity and Authorization · Record closed April 2, 2026
+
+**Inventor:** Jeffrey Williams · Chiang Mai, Thailand  
+**Contact:** IBA@intentbound.com  
+**Website:** IntentBound.com
+
+Acquisition enquiries welcome · IBA@intentbound.com
+
+---
+
+## Related Projects
+
+- [Live IBA Governance Demo](https://governinglayer.com/codeguard-html/) — Code Guard
+- [IBA Agent Swarm](https://ibacore.com/swarm-html/) — Shard token delegation live
+- [iba-code-guard](https://github.com/Grokipaedia/iba-code-guard) — Govern code contributions
+- [iba-skill-guard](https://github.com/Grokipaedia/iba-skill-guard) — Govern knowledge transfer
+- [Full IBA ecosystem](https://intentbound.com)
+
+---
+
+**The agent found the bugs.**  
+**A human needs to have declared the authorization before it fixed them.**
+
+IntentBound.com  
+Patent GB2603013.0 Pending · IETF draft-williams-intent-token-00  
+13 NIST filings · 10 NCCoE filings  
+Available for acquisition · IBA@intentbound.com
